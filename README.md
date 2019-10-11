@@ -1,2 +1,2 @@
-# gofishing-web-admin
-前端后台管理代码
+# gofishing-web-parent
+前端代码
