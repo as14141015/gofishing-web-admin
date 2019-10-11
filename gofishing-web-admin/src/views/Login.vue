@@ -51,20 +51,36 @@
             this.logining = true;
             //NProgress.start();
             var loginParams = { username: this.ruleForm2.account, password: this.ruleForm2.checkPass };
-            requestLogin(loginParams).then(data => {
+            this.$http.post("/plat/plat/login",loginParams).then(res=>{
+              //登录的圈圈
               this.logining = false;
-              //NProgress.done();
-              let { msg, code, user } = data;
-              if (code !== 200) {
+              let {success,message,object} = res.data;
+              if (success){
+                //sessionStorage前端的客户端浏览器的session H5的新技术
+                sessionStorage.setItem('user', JSON.stringify(object));
+                this.$router.push({ path: '/mainPage' });
+              } else {
                 this.$message({
-                  message: msg,
+                  message: message,
                   type: 'error'
                 });
-              } else {
-                sessionStorage.setItem('user', JSON.stringify(user));
-                this.$router.push({ path: '/table' });
+
               }
-            });
+            })
+            // requestLogin(loginParams).then(data => {
+            //   this.logining = false;
+            //   //NProgress.done();
+            //   let { msg, code, user } = data;
+            //   if (code !== 200) {
+            //     this.$message({
+            //       message: msg,
+            //       type: 'error'
+            //     });
+            //   } else {
+            //     sessionStorage.setItem('user', JSON.stringify(user));
+            //     this.$router.push({ path: '/echarts' });
+            //   }
+            // });
           } else {
             console.log('error submit!!');
             return false;

@@ -10,9 +10,14 @@ import Vuex from 'vuex'
 //import NProgress from 'nprogress'
 //import 'nprogress/nprogress.css'
 import routes from './routes'
-import Mock from './mock'
-Mock.bootstrap();
+//mport Mock from './mock'
+//Mock.bootstrap();
+//全局配置axios
 import 'font-awesome/css/font-awesome.min.css'
+import axios from 'axios'
+axios.defaults.baseURL = "http://localhost:8888/services"//网关
+Vue.prototype.$http = axios;
+
 
 Vue.use(ElementUI)
 Vue.use(VueRouter)
