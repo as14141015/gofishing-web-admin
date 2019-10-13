@@ -2,6 +2,7 @@ import Login from './views/Login.vue'
 import NotFound from './views/404.vue'
 import Home from './views/Home.vue'
 import Brand from "./views/product/Brand.vue";
+import ProductType from "./views/product/ProductType.vue";
 import Main from './views/Main.vue'
 import Table from './views/nav1/Table.vue'
 import Form from './views/nav1/Form.vue'
@@ -42,7 +43,7 @@ let routes = [
         iconCls: 'fa fa-id-card-o',
         children: [
             {path: '/brand', component: Brand, name: '商品品牌'},
-            {path: '/table', component: Table, name: '商品类型'},
+            {path: '/productType', component: ProductType, name: '商品类型'},
             {path: '/form', component: Form, name: '商品模板'},
             {path: '/user', component: user, name: '商品规格'},
             {path: '/page7', component: Page4, name: '商品管理'},
