@@ -128,63 +128,50 @@
 			</div>
 		</el-dialog>
 
-		<!--编辑界面-->
-<!--		<el-dialog title="编辑" v-model="editFormVisible" :close-on-click-modal="false">-->
-<!--			<el-form :model="editForm" label-width="80px" :rules="saveFormRules" ref="editForm">-->
-<!--				<el-form-item label="标题" prop="name">-->
-<!--					<el-input v-model="editForm.name" auto-complete="off"></el-input>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="副标题" prop="subName">-->
-<!--					<el-input v-model="editForm.subName" auto-complete="off"></el-input>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="商品类型" prop="productTypes">-->
-<!--					<el-cascader-->
-<!--							v-model="editForm.productTypes"-->
-<!--							expand-trigger="hover"-->
-<!--							:options="options"-->
-<!--							:props="defaultParams"-->
-<!--							@change="handleChange">-->
-<!--					</el-cascader>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="品牌">-->
-<!--					&lt;!&ndash;<el-input v-model="saveForm.brandId" auto-complete="off">-->
-<!--                    </el-input>&ndash;&gt;-->
-<!--					<el-select v-model="editForm.brandId" clearable-->
-<!--							   placeholder="请选择品牌">-->
-<!--						<el-option-->
-<!--								v-for="item in brands"-->
-<!--								:label="item.name"-->
-<!--								:value="item.id">-->
-<!--						</el-option>-->
-<!--					</el-select>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="媒体属性">-->
-<!--					<el-upload-->
-<!--							class="upload-demo"-->
-<!--							action="http://localhost:8888/services/common/file"-->
-<!--							:on-success="handleSuccess"-->
-<!--							:on-remove="handleRemove"-->
-<!--							:file-list="fileList"-->
-<!--							list-type="picture">-->
-<!--						<el-button size="small" type="primary">点击上传</el-button>-->
-<!--					</el-upload>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="商品描述">-->
-<!--					<el-input type="textarea" v-model="editForm.ext.description"-->
-<!--							  auto-complete="off"></el-input>-->
-<!--				</el-form-item>-->
-<!--				<el-form-item label="商品详情">-->
-<!--					<quill-editor-->
-<!--							ref="QuillEditor"-->
-<!--							v-model="editForm.ext.richContent"></quill-editor>-->
-<!--				</el-form-item>-->
-<!--			</el-form>-->
-<!--			<div slot="footer" class="dialog-footer">-->
-<!--				<el-button @click.native="editFormVisible = false">取消</el-button>-->
-<!--				<el-button type="primary" @click.native="editSubmit" :loading="editLoading">提交</el-button>-->
-<!--			</div>-->
-<!--		</el-dialog>-->
-
+		<!-- 显示属性模态窗 -->
+		<el-dialog size="tiny" title="显示属性" v-model="viewPropertiesShow" :close-on-click-modal="false">
+			<el-form label-width="80px">
+				<el-form-item v-for="viewProperty in viewProperties"
+							  :label="viewProperty.specName">
+					<el-input v-model="viewProperty.value" auto-complete="off">
+					</el-input>
+				</el-form-item>
+			</el-form>
+			<div slot="footer" class="dialog-footer">
+				<el-button @click.native="viewPropertiesShow = false">取消</el-button>
+				<el-button type="primary" @click.native="viewSubmit" :loading="saveLoading">提交</el-button>
+			</div>
+		</el-dialog>
+		<!-- sku属性模态窗 -->
+		<el-dialog title="sku属性" v-model="skuPropertiesShow" :close-on-click-modal="false">
+			<!--外层循环展示sku属性名-->
+			<el-card class="box-card" v-for="(skuProperty,ind) in skuProperties">
+				<div slot="header" class="clearfix">
+					<span style="line-height: 36px;">{{skuProperty.specName}}</span>
+				</div>
+				<!--内层循环展示sku属性的选项-->
+				<div v-for="index in skuProperty.options.length+1" class="text item">
+					<el-row>
+						<el-col :span="18">
+							<el-input v-model="skuProperty.options[index-1]" autocomplete="off"></el-input>
+						</el-col>
+						<el-col :span="6">
+							<el-button :plain="true" type="danger" @click="removeProperty(ind,index-1)">&nbsp;-&nbsp;</el-button>
+						</el-col>
+					</el-row>
+				</div>
+			</el-card>
+			<div slot="footer" class="dialog-footer">
+				<el-button @click.native="skuPropertiesShow = false">取消</el-button>
+				<el-button type="primary" @click.native="skuSubmit" :loading="saveLoading">提交</el-button>
+			</div>
+			<!--根据上面的属性动态生成表格-->
+			<el-table :data="skus" highlight-current-row style="width: 100%;">
+				<el-table-column v-for="(value,key) in skus[0]" :label="key"
+								 :prop="key">
+				</el-table-column>
+			</el-table>
+		</el-dialog>
 
 	</section>
 </template>
@@ -197,6 +184,7 @@
 	export default {
 		data() {
 			return {
+				skus:[],//用来装经过算法返回的值
 				fileList: [],//用作回显
 				fileListPics: [],//用作装图片遍历之后的字符串
 				brands:[],
@@ -217,7 +205,10 @@
 				sels: [],//列表选中列
 				saveFormVisible: false,//新增界面是否显示
 				saveLoading: false,
-
+				viewPropertiesShow:false,//显示属性界面是否显示
+				viewProperties:[],//获取查询来显示属性的数据
+				skuPropertiesShow:false,//sku属性界面是否显示
+				skuProperties:[],
 				//新增界面数据
 				saveForm: {
 					name: '',
@@ -290,15 +281,116 @@
 
 			},
 			//显示属性维护
-			handleViewProperties(){},
+			handleViewProperties(){
+				//只能选中一行数据
+				if(this.sels.length==0){
+					this.$message({
+						message: '请选中一行数据',
+						type: 'warning'
+					});
+					return;
+				}
+				if(this.sels.length>1){
+					this.$message({
+						message: '只能选中一行数据',
+						type: 'warning'
+					});
+					return;
+				}
+				let productId = this.sels[0].id;
+				//查询要维护商品的显示属性
+				this.$http.get("/product/product/viewProperties/"+productId)
+						.then(res=>{
+							this.viewProperties = res.data;
+						});
+				this.viewPropertiesShow = false;
+			},
+			//显示属性提交
+			viewSubmit(){
+				let productId = this.sels[0].id;
+				this.$confirm('确认保存吗?', '提示', {
+					type: 'warning'
+				}).then(() => {
+						this.$http.post("/product/product/updateViewProperties?productId="+productId,this.viewProperties)
+							.then(res=>{
+								let {success,message} = res.data;
+								if(success){
+									this.$message({
+										message: '保存成功!',
+										type: 'success'
+									});
+									this.viewPropertiesDialogVisible =false;
+								}else{
+									this.$message({
+										message: message,
+										type: 'error'
+									});
+								}
+							})
+				}).catch(() => {
+				});
+			},
 			//sku属性维护
-			handleSkuProperties(){},
+			handleSkuProperties(){
+				//只能选中一行数据
+				if(this.sels.length==0){
+					this.$message({
+						message: '请选中一行数据',
+						type: 'warning'
+					});
+					return;
+				}
+				if(this.sels.length>1){
+					this.$message({
+						message: '只能选中一行数据',
+						type: 'warning'
+					});
+					return;
+				}
+				let productId = this.sels[0].id;
+				//查询要维护商品的显示属性
+				this.$http.get("/product/product/skuProperties/"+productId)
+						.then(res=>{
+							this.skuProperties = res.data;
+						});
+				this.skuPropertiesShow = true;
+			},
+			//sku属性提交
+			skuSubmit(){
+				let productId = this.sels[0].id;
+				this.$confirm('确认保存吗?', '提示', {
+					type: 'warning'
+				}).then(() => {
+					this.$http.post("/product/product/updateViewProperties?productId="+productId,this.viewProperties)
+							.then(res=>{
+								let {success,message} = res.data;
+								if(success){
+									this.$message({
+										message: '保存成功!',
+										type: 'success'
+									});
+									this.viewPropertiesDialogVisible =false;
+								}else{
+									this.$message({
+										message: message,
+										type: 'error'
+									});
+								}
+							})
+				}).catch(() => {
+				});
+			},
+			//sku属性删除选项
+			removeProperty(index1,index2){
+				//index1 第几个sku属性 index2 当前属性的第几个选项
+				this.skuProperties[index1].options.splice(index2,1);
+			},
 			//商品上架
 			handleOnSale(){},
 			//商品下架
 			handleOffSale(){},
 			//上架时间格式
-			formatOnSaleTime(row, column){
+			formatOnSaleTime(row){
 				return this.formatTime(row.onSaleTime);
 			},
 			//下架时间格式
@@ -517,6 +609,34 @@
 				}).catch(() => {
 
 				});
+			}
+		},
+		//核心方法，监听skuProperties属性值的变化
+		watch:{
+			skuProperties:{
+				handler(){
+					//过滤掉options为空数组的sku属性
+					let skuPropertiesArr = this.skuProperties.filter(e=>e.options.length>0);
+					let result = skuPropertiesArr.reduce((pre,cur,currentIndex)=>{
+						//创建一个空数组来获取值
+						let temp = [];
+						pre.forEach(e1=>{ //e1 {} 第一次是为初始的空，从第二次开始就是上次循环的结果值
+								cur.options.forEach((e2,index)=>{ //e2 从数组的第一个参数开始
+									let obj = Object.assign({},e1);
+									obj[cur.specName] = e2; //获取每个specName的值
+									//判断是否是最后一次循环 如果是最后一次，拼接价格和库存
+									if(currentIndex==skuPropertiesArr.length-1){
+										obj.price = 0;
+										obj.store = 0;
+									}
+									temp.push(obj);
+								})
+							});
+							return temp;
+					},[{}]);
+					this.skus = result;//赋值给data中的数组
+				},
+				deep:true
 			}
 		},
 		mounted() {
