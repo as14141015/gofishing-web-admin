@@ -14,7 +14,6 @@
 				</el-form-item>
 			</el-form>
 		</el-col>
-
 		<!--列表-->
 		<el-table :data="brands" highlight-current-row v-loading="listLoading" @selection-change="selsChange" style="width: 100%;">
 			<el-table-column type="selection" width="55"></el-table-column>
@@ -23,18 +22,18 @@
 			</el-table-column>
 			<el-table-column prop="englishName" label="英文名" width="120"  sortable>
 			</el-table-column>
-			<el-table-column prop="firstLetter" label="字母头" width="100" sortable>
+			<el-table-column prop="firstLetter" label="首字母" width="120" sortable>
 			</el-table-column>
 			<el-table-column prop="productType.name" label="商品类型" width="120" sortable>
 			</el-table-column>
-			<el-table-column prop="logo" label="品牌logo" min-width="160" sortable>
+			<el-table-column prop="logo" label="品牌logo" width="130" sortable>
 				<template scope="scope">
-					<img src="scope.row.logo" width="50px" height="50px">
+					<img :src="'http://172.16.4.27'+scope.row.logo" width="50px" height="50px">
 				</template>
 			</el-table-column>
-			<el-table-column prop="createTime" label="创建时间" min-width="118" sortable>
+			<el-table-column prop="createTime" label="创建时间" width="118"  :formatter="createTime" sortable>
 			</el-table-column>
-			<el-table-column prop="updateTime" label="修改时间" min-width="118" sortable>
+			<el-table-column prop="updateTime" label="修改时间" min-width="118" :formatter="updateTime"  sortable>
 			</el-table-column>
 			<el-table-column label="操作" width="150">
 				<template scope="scope">
@@ -60,22 +59,29 @@
 				<el-form-item label="英文名称" prop="englishName">
 					<el-input v-model="saveForm.englishName" auto-complete="off"></el-input>
 				</el-form-item>
-				<el-form-item label="首字母" prop="firstLetter">
-					<el-input v-model="saveForm.firstLetter" auto-complete="off"></el-input>
-				</el-form-item>
-				<el-form-item label=".." prop="description">
-					<el-input v-model="saveForm.description" auto-complete="off"></el-input>
-				</el-form-item>
-				<el-form-item label="类型" prop="product_type_id">
-					<el-radio-group v-model="saveForm.product_type_id">
-						<el-radio class="radio" :label="1">男</el-radio>
-						<el-radio class="radio" :label="0">女</el-radio>
-					</el-radio-group>
-				</el-form-item>
-				<el-form-item label="sortIndex" prop="sortIndex">
-					<el-input v-model="saveForm.sortIndex" auto-complete="off"></el-input>
+				<el-form-item label="商品类型" prop="productTypes">
+					<el-cascader
+							v-model="saveForm.productTypes"
+							expand-trigger="hover"
+							:options="options"
+							:props="defaultParams"
+							@change="handleChange">
+					</el-cascader>
 				</el-form-item>
 				<el-form-item label="公司Logo" prop="logo">
+					<el-upload
+							class="upload-demo"
+							action="http://localhost:8888/services/common/file"
+							:on-success="handleSuccess"
+							:before-upload="handleBefore"
+							:on-remove="handleRemove"
+							:file-list="fileList"
+							list-type="picture">
+						<el-button size="small" type="primary">点击上传</el-button>
+					</el-upload>
+				</el-form-item>
+				<el-form-item label="品牌描述">
+					<el-input type="textarea" v-model="saveForm.description"></el-input>
 				</el-form-item>
 			</el-form>
 			<div slot="footer" class="dialog-footer">
@@ -94,9 +100,16 @@
 	export default {
 		data() {
 			return {
+				options:[],
 				filters: {
 					keyword: ''
 				},
+				defaultParams: {
+					label: 'name',
+					value: 'id',
+					children: 'children'
+				},
+				fileList:[],
 				brands: [],
 				total: 0,
 				page: 1,
@@ -109,22 +122,127 @@
 				saveFormRules: {
 					name: [
 						{ required: true, message: '请输入姓名', trigger: 'blur' }
+					],
+					englishName: [
+						{ required: true, message: '请输入姓名', trigger: 'blur' }
+					],
+					productTypes: [
+						{type:'array', required: true, message: '请输入姓名', trigger: 'blur' }
 					]
 				},
 				//编辑界面数据
 				saveForm: {
 					name: '',
 					englishName: '',
-					firstLetter: 0,
+					productTypes: [],
 					description: '',
-					product_type_id: '',
-					sortIndex: '',
+					productTypeId: 0,
 					logo: '',
 				},
 
 			}
 		},
 		methods: {
+			//文件上传之前
+			handleBefore(file){
+				if(this.fileList.length>0){
+					this.$message({
+						message: '只能上传一张logo图片',
+						type: 'warning'
+					});
+					return false;//停止上传
+				}
+			},
+			//文件上传之后
+			handleSuccess(response, file, fileList){
+				let {success,message,object} = response;
+				console.log("response==02",response);
+				console.log("fileList==02",fileList);
+				if(success){
+					this.saveForm.logo = object;
+					this.$message({
+						message: '上传成功',
+						type: 'success'
+					});
+				}else{
+					this.$message({
+						message: message,
+						type: 'error'
+					});
+				}
+				this.fileList = fileList;
+			},
+			//Logo文件删除
+			handleRemove() {
+				this.fileId = this.saveForm.logo;
+				this.$http.delete("/common/file?fileId="+this.fileId).then((res)=>{
+					let {success,message} = res.data;
+					if (success){
+						this.$message({
+							message: 'Logo删除成功',
+							type: 'success'
+						});
+					}else{
+						this.$message({
+							message: message,
+							type: 'error'
+						});
+					}
+				});
+				this.fileList=[]
+			},
+
+			//创建时间
+			createTime(row){
+				return this.formatTime(row.createTime);
+			},
+			//修改时间
+			updateTime(row){
+				return this.formatTime(row.updateTime);
+
+			},
+			formatTime(time){
+				if(!time){
+					return null;
+				}
+				let date = new Date(time);
+				let year = date.getFullYear();
+				let month = date.getMonth()+1;
+				let day = date.getDate();//获取一个月中的第几天
+				let hour = date.getHours();
+				let minute = date.getMinutes();
+				let second = date.getSeconds();
+				let timeStr = year+"-"+this.formatTimeNum(month)+"-"+this.formatTimeNum(day)
+						+" "+this.formatTimeNum(hour)+":"+this.formatTimeNum(minute)+":"+this.formatTimeNum(second);
+				return timeStr;
+			},
+			formatTimeNum(num){
+				if(num>=10){
+					return num;
+				}
+				return "0"+num;
+			},
+			//查询商品类型的联级
+			handleChange(value) {
+				this.$http.get("/product/productType/loadProductTypeTree")
+						.then((res)=>{
+							this.options = this.getTreeData(res.data);
+						})
+			},
+			// 递归判断列表，把最后的children设为undefined
+			getTreeData(data){
+				for(var i = 0;i<data.length;i++){
+					if(data[i].children.length<1){
+						// children若为空数组，则将children设为undefined
+						data[i].children = undefined;
+					}else {
+						// children若不为空数组，则继续 递归调用 本方法
+						this.getTreeData(data[i].children);
+					}
+				}
+				return data;
+			},
+			//分页
 			handleCurrentChange(val) {
 				this.page = val;
 				this.getBrands();
@@ -177,8 +295,16 @@
 			},
 			//显示编辑界面
 			handleSave: function (index, row) {
+				console.debug(row)
+				var a = row.productType.path.split('.');
+				a = a.splice(1,a.length-2);
+				for (let i = 0; i < a.length; i++) {
+					a[i] = parseInt(a[i]);
+				}
+				this.saveForm.logo = "http://172.16.4.27" + row.logo;
 				this.saveFormVisible = true;
 				this.saveForm = Object.assign({}, row);
+				this.saveForm.productTypes = a;
 			},
 			//显示新增界面
 			handleAdd: function () {
@@ -191,17 +317,22 @@
 					if (valid) {
 						this.$confirm('确认提交吗？', '提示', {}).then(() => {
 							this.saveLoading = true;
-							//NProgress.start();
+							this.saveForm.productTypeId = this.saveForm.productTypes[this.saveForm.productTypes.length-1];
 							let para = Object.assign({}, this.saveForm);
-							para.birth = (!para.birth || para.birth == '') ? '' : util.formatDate.format(new Date(para.birth), 'yyyy-MM-dd');
-							saveUser(para).then((res) => {
+							// 传数据到后台
+							this.$http.post("/product/brand/save", para).then(result=>{
+								if (result.data.success) {
+									this.$message({
+										message: '提交成功',
+										type: 'success'
+									});
+								} else {
+									this.$message({
+										message: result.data.message,
+										type: 'error'
+									});
+								}
 								this.saveLoading = false;
-								//NProgress.done();
-								this.$message({
-									message: '提交成功',
-									type: 'success'
-								});
-								this.$refs['saveForm'].resetFields();
 								this.saveFormVisible = false;
 								this.getBrands();
 							});
@@ -222,7 +353,7 @@
 					this.$http.delete("/product/brand/deleteBatch?ids="+ids)
 							.then((res)=>{
 								this.listLoading = false;
-								let {success,message,object}=res.data;
+								let {success,message}=res.data;
 								if (success){
 									this.$message({
 										message: message,
@@ -246,6 +377,7 @@
 		},
 		mounted() {
 			this.getBrands();
+			this.handleChange();
 		}
 	}
 
