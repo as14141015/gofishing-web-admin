@@ -28,7 +28,7 @@
 			</el-table-column>
 			<el-table-column prop="logo" label="品牌logo" width="130" sortable>
 				<template scope="scope">
-					<img :src="'http://172.16.4.27'+scope.row.logo" width="50px" height="50px">
+					<img :src="'http://10.11.185.56'+scope.row.logo" width="50px" height="50px">
 				</template>
 			</el-table-column>
 			<el-table-column prop="createTime" label="创建时间" width="118"  :formatter="createTime" sortable>
@@ -157,6 +157,7 @@
 			handleSuccess(response, file, fileList){
 				let {success,message,object} = response;
 				console.log("response==02",response);
+				console.log("file==02",file);
 				console.log("fileList==02",fileList);
 				if(success){
 					this.saveForm.logo = object;
@@ -269,6 +270,7 @@
 					type: 'warning'
 				}).then(() => {
 					this.listLoading = true;
+					this.saveForm.logo = row.logo;
 					this.$http.delete("/product/brand/delete/"+row.id)
 							.then((res)=>{
 								this.listLoading = false;
@@ -278,6 +280,7 @@
 										message: message,
 										type: 'success'
 									});
+									this.handleRemove();
 									this.getBrands();
 								}else {
 									this.$message({
@@ -295,13 +298,13 @@
 			},
 			//显示编辑界面
 			handleSave: function (index, row) {
-				console.debug(row)
+				console.debug(row);
 				var a = row.productType.path.split('.');
 				a = a.splice(1,a.length-2);
 				for (let i = 0; i < a.length; i++) {
 					a[i] = parseInt(a[i]);
 				}
-				this.saveForm.logo = "http://172.16.4.27" + row.logo;
+				this.saveForm.logo = "http://10.11.185.56" + row.logo;
 				this.saveFormVisible = true;
 				this.saveForm = Object.assign({}, row);
 				this.saveForm.productTypes = a;
@@ -309,6 +312,7 @@
 			//显示新增界面
 			handleAdd: function () {
 				this.saveFormVisible = true;
+				this.saveForm.logo = '';
 				this.saveForm = {};
 			},
 			//编辑和新增
@@ -319,6 +323,7 @@
 							this.saveLoading = true;
 							this.saveForm.productTypeId = this.saveForm.productTypes[this.saveForm.productTypes.length-1];
 							let para = Object.assign({}, this.saveForm);
+							console.debug(para);
 							// 传数据到后台
 							this.$http.post("/product/brand/save", para).then(result=>{
 								if (result.data.success) {
@@ -359,6 +364,10 @@
 										message: message,
 										type: 'success'
 									});
+									for(let i = 0; i < this.sels.length; i++) {
+										this.saveForm.logo = this.sels[i].logo;
+										this.handleRemove();
+									}
 									this.getBrands();
 								}else {
 									this.$message({

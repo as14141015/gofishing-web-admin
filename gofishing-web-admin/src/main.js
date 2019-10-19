@@ -7,7 +7,6 @@ import 'element-ui/lib/theme-default/index.css'
 import VueRouter from 'vue-router'
 import store from './vuex/store'
 import Vuex from 'vuex'
-//import NProgress from 'nprogress'
 //import 'nprogress/nprogress.css'
 import routes from './routes'
 //mport Mock from './mock'
@@ -22,8 +21,13 @@ Vue.prototype.$http = axios;
 Vue.use(ElementUI)
 Vue.use(VueRouter)
 Vue.use(Vuex)
+//引入富文本编辑器
+import VueQuillEditor from 'vue-quill-editor'
+import 'quill/dist/quill.core.css'
+import 'quill/dist/quill.snow.css'
+import 'quill/dist/quill.bubble.css'
 
-//NProgress.configure({ showSpinner: false });
+Vue.use(VueQuillEditor);
 
 const router = new VueRouter({
   routes

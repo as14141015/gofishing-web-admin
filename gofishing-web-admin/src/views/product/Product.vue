@@ -86,7 +86,7 @@
 							@change="handleChange">
 					</el-cascader>
 				</el-form-item>
-				<el-form-item label="品牌">
+				<el-form-item label="品牌" prop="brandId">
 					<!--<el-input v-model="saveForm.brandId" auto-complete="off">
                     </el-input>-->
 					<el-select v-model="saveForm.brandId" clearable
@@ -115,10 +115,10 @@
 				</el-form-item>
 				<el-form-item label="商品详情">
 					<quill-editor
-							ref="QuillEditor"
-							v-model="saveForm.ext.richContent">
+					v-model="saveForm.ext.richContent"
+					ref="myQuillEditor"
+					>
 					</quill-editor>
-
 
 				</el-form-item>
 			</el-form>
@@ -185,6 +185,7 @@
 <!--			</div>-->
 <!--		</el-dialog>-->
 
+
 	</section>
 </template>
 
@@ -197,6 +198,7 @@
 		data() {
 			return {
 				fileList: [],//用作回显
+				fileListPics: [],//用作装图片遍历之后的字符串
 				brands:[],
 				filters: {
 					keyword: ''
@@ -213,22 +215,6 @@
 				rows: 10,
 				listLoading: false,
 				sels: [],//列表选中列
-				// editFormVisible: false,//编辑界面是否显示
-				// editLoading: false,
-				// //编辑界面数据
-				// editForm: {
-				// 	name: '',
-				// 	subName: '',
-				// 	productTypeId: null,
-				// 	brandId: null,
-				// 	medias:'',
-				// 	productTypes:[],//商品级联下拉框
-				// 	ext:{
-				// 		description:'',
-				// 		richContent:''
-				// 	}
-				// },
-
 				saveFormVisible: false,//新增界面是否显示
 				saveLoading: false,
 
@@ -251,14 +237,23 @@
 					],
 					subName: [
 						{ required: true, message: '请输入副标题', trigger: 'blur' }
+					],
+					productTypes: [
+						{ type:"array",required: true, message: '请选择商品类型', trigger: 'blur' }
 					]
 				}
 			}
 		},
 		methods: {
+			//查询相应ext的对应的数据
+			handleExt(id){
+				this.$http.get("/product/productExt/productIdGetEid?id="+id)
+						.then((res)=>{
+							this.saveForm.ext = res.data;
+						})
+			},
 			//Logo文件删除
 			handleRemove() {
-				// this.fileId = this.saveForm.logo;
 				this.$http.delete("/common/file?fileId="+this.fileId).then((res)=>{
 					let {success,message,object} = res.data;
 					if (success){
@@ -273,7 +268,6 @@
 						});
 					}
 				})
-				this.fileList=[]
 			},
 			//文件上传之后
 			handleSuccess(response, file, fileList){
@@ -293,6 +287,7 @@
 					});
 				}
 				this.fileList = fileList;
+
 			},
 			//显示属性维护
 			handleViewProperties(){},
@@ -341,7 +336,7 @@
 						})
 			},
 			//查询商品类型的联级
-			handleChange(value) {
+			handleChange() {
 				this.$http.get("/product/productType/loadProductTypeTree")
 						.then((res)=>{
 							this.options = this.getTreeData(res.data);
@@ -389,7 +384,7 @@
 					this.$http.delete("/product/product/delete/"+row.id)
 							.then((res)=>{
 								this.listLoading = false;
-								let {success,message,object}=res.data;
+								let {success,message}=res.data;
 								if (success){
 									this.$message({
 										message: message,
@@ -414,8 +409,24 @@
 			},
 			//显示编辑界面
 			handleEdit: function (index, row) {
+				this.handleExt(row.id);
 				this.saveFormVisible = true;
+				console.debug(row);
 				this.saveForm = Object.assign({}, row);
+				var a = row.productType.path.split('.');
+				a = a.splice(1,a.length-2);
+				for (let i = 0; i < a.length; i++) {
+					a[i] = parseInt(a[i]);
+				}
+				this.fileListPics = row.medias.split(',');
+				for (let f = 0; f < this.fileListPics.length; f++) {
+					let pic={url:''};
+					pic.url=this.fileListPics[f];
+					this.fileList.push(pic);
+				}
+
+				console.debug("====",this.saveForm);
+				this.saveForm.productTypes = a;
 			},
 			//显示新增界面
 			handleSave: function () {
@@ -425,7 +436,7 @@
 					subName: '',
 					productTypeId: null,
 					brandId: null,
-					medias:'',
+					medias:'',//接收多个上传图片的值
 					productTypes:[],//商品级联下拉框
 					ext:{
 						description:'',
@@ -441,6 +452,12 @@
 							this.saveLoading = true;
 							let para = Object.assign({}, this.saveForm);
 							para.productTypeId = this.saveForm.productTypes[this.saveForm.productTypes.length-1];
+							console.debug(this.fileList);
+							para.medias =
+									this.fileList.map(file=>file.response.object).join(",");
+
+							console.debug("paar",para);
+							// para.brandId =;
 							this.$http.post("/product/product/save",para)
 									.then((res)=>{
 										this.saveLoading = false;
@@ -459,6 +476,9 @@
 											});
 										}
 									});
+							this.saveLoading = false;
+							this.saveFormVisible = false;
+							this.getProducts();
 						});
 					}
 				});
