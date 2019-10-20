@@ -167,9 +167,9 @@
 			</div>
 			<!--根据上面的属性动态生成表格-->
 			<el-table :data="skus" highlight-current-row style="width: 100%;">
-				<el-table-column v-if="key!='price'&&key!='store' && key!='indexs'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
+				<el-table-column v-if="key!='price'&&key!='availableStock' && key!='indexs'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
 				</el-table-column>
-				<el-table-column v-if="key=='price'||key=='store'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
+				<el-table-column v-if="key=='price'||key=='availableStock'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
 					<template scope="scope">
 						<el-input v-model="scope.row[key]" auto-complete="off"/>
 					</template>
@@ -355,8 +355,8 @@
 				//查询要维护商品的显示属性
 				this.$http.get("/product/product/skuProperties/"+productId)
 						.then(res=>{
-							this.skuProperties = res.data;
-							console.debug("skuProperties",this.skuProperties);
+							this.skuProperties = res.data.skuProperties;
+							this.skus =  res.data.skus;
 						});
 				this.skuPropertiesShow = true;
 			},
@@ -367,8 +367,6 @@
 				parameter.skuProperties = this.skuProperties;
 				console.debug("skuProperties",this.skuProperties);
 				parameter.skus = this.skus;
-				console.debug("skus",this.skus );
-				console.debug("parameter",parameter);
 				this.$confirm('确认保存吗?', '提示', {
 					type: 'warning'
 				}).then(() => {
@@ -558,9 +556,6 @@
 							console.debug(this.fileList);
 							para.medias =
 									this.fileList.map(file=>file.response.object).join(",");
-
-							console.debug("paar",para);
-							// para.brandId =;
 							this.$http.post("/product/product/save",para)
 									.then((res)=>{
 										this.saveLoading = false;
@@ -631,6 +626,7 @@
 					let result = skuPropertiesArr.reduce((pre,cur,currentIndex)=>{
 						//创建一个空数组来获取值
 						let temp = [];
+						let i = 0;
 						pre.forEach(e1=>{ //e1 {} 第一次是为初始的空，从第二次开始就是上次循环的结果值
 								cur.options.forEach((e2,index)=>{ //e2 从数组的第一个参数开始
 									let obj = Object.assign({},e1);
@@ -640,8 +636,14 @@
 									if(!lastIndexs) lastIndexs = "";
 									//判断是否是最后一次循环 如果是最后一次，拼接价格和库存
 									if(currentIndex==skuPropertiesArr.length-1){
-										obj.price = 0;
-										obj.store = 0;
+										if (i<this.skus.length){
+											obj.price = this.skus[i].price;
+											obj.availableStock = this.skus[i].availableStock;
+											i++;
+										}else {
+											obj.price = 0;
+											obj.availableStock = 0;
+										}
 										lastIndexs = lastIndexs+index;
 									}else {
 										lastIndexs = lastIndexs+index+"_";
@@ -652,8 +654,8 @@
 							});
 							return temp;
 					},[{}]);
-					console.debug("result",result);
 					this.skus = result;//赋值给data中的数组
+
 				},
 				deep:true
 			}
