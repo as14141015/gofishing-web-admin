@@ -167,8 +167,12 @@
 			</div>
 			<!--根据上面的属性动态生成表格-->
 			<el-table :data="skus" highlight-current-row style="width: 100%;">
-				<el-table-column v-for="(value,key) in skus[0]" :label="key"
-								 :prop="key">
+				<el-table-column v-if="key!='price'&&key!='store' && key!='indexs'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
+				</el-table-column>
+				<el-table-column v-if="key=='price'||key=='store'" v-for="(value,key) in skus[0]" :label="key" :prop="key">
+					<template scope="scope">
+						<el-input v-model="scope.row[key]" auto-complete="off"/>
+					</template>
 				</el-table-column>
 			</el-table>
 		</el-dialog>
@@ -184,7 +188,6 @@
 	export default {
 		data() {
 			return {
-				skus:[],//用来装经过算法返回的值
 				fileList: [],//用作回显
 				fileListPics: [],//用作装图片遍历之后的字符串
 				brands:[],
@@ -209,6 +212,7 @@
 				viewProperties:[],//获取查询来显示属性的数据
 				skuPropertiesShow:false,//sku属性界面是否显示
 				skuProperties:[],
+				skus:[],//用来装经过算法返回的值
 				//新增界面数据
 				saveForm: {
 					name: '',
@@ -352,16 +356,23 @@
 				this.$http.get("/product/product/skuProperties/"+productId)
 						.then(res=>{
 							this.skuProperties = res.data;
+							console.debug("skuProperties",this.skuProperties);
 						});
 				this.skuPropertiesShow = true;
 			},
 			//sku属性提交
 			skuSubmit(){
 				let productId = this.sels[0].id;
+				let parameter = {};
+				parameter.skuProperties = this.skuProperties;
+				console.debug("skuProperties",this.skuProperties);
+				parameter.skus = this.skus;
+				console.debug("skus",this.skus );
+				console.debug("parameter",parameter);
 				this.$confirm('确认保存吗?', '提示', {
 					type: 'warning'
 				}).then(() => {
-					this.$http.post("/product/product/updateViewProperties?productId="+productId,this.viewProperties)
+					this.$http.post("/product/product/updateSkuProperties?productId="+productId,parameter)
 							.then(res=>{
 								let {success,message} = res.data;
 								if(success){
@@ -369,7 +380,7 @@
 										message: '保存成功!',
 										type: 'success'
 									});
-									this.viewPropertiesDialogVisible =false;
+									this.skuPropertiesShow =false;
 								}else{
 									this.$message({
 										message: message,
@@ -624,16 +635,24 @@
 								cur.options.forEach((e2,index)=>{ //e2 从数组的第一个参数开始
 									let obj = Object.assign({},e1);
 									obj[cur.specName] = e2; //获取每个specName的值
+									let lastIndexs = obj.indexs;//获取上一次的indexs,后面拼接这一次的索引
+									//如果没有值就设置为一个字符串
+									if(!lastIndexs) lastIndexs = "";
 									//判断是否是最后一次循环 如果是最后一次，拼接价格和库存
 									if(currentIndex==skuPropertiesArr.length-1){
 										obj.price = 0;
 										obj.store = 0;
+										lastIndexs = lastIndexs+index;
+									}else {
+										lastIndexs = lastIndexs+index+"_";
 									}
+									obj.indexs = lastIndexs;
 									temp.push(obj);
 								})
 							});
 							return temp;
 					},[{}]);
+					console.debug("result",result);
 					this.skus = result;//赋值给data中的数组
 				},
 				deep:true
