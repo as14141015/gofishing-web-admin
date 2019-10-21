@@ -286,6 +286,13 @@
 			},
 			//显示属性维护
 			handleViewProperties(){
+				if(this.sels[0].state == 1){
+					this.$message({
+						message: '该商品上架中，请先下架再维护！！',
+						type: 'warning'
+					});
+					return;
+				}
 				//只能选中一行数据
 				if(this.sels.length==0){
 					this.$message({
@@ -336,6 +343,13 @@
 			},
 			//sku属性维护
 			handleSkuProperties(){
+				if(this.sels[0].state == 1){
+					this.$message({
+						message: '该商品上架中，请先下架再维护！！',
+						type: 'warning'
+					});
+					return;
+				}
 				//只能选中一行数据
 				if(this.sels.length==0){
 					this.$message({
@@ -395,9 +409,61 @@
 				this.skuProperties[index1].options.splice(index2,1);
 			},
 			//商品上架
-			handleOnSale(){},
+			handleOnSale(){
+				var ids = this.sels.map(item => item.id).toString();
+				this.$confirm('确认上架选中商品吗？', '提示', {
+					type: 'warning'
+				}).then(() => {
+					this.listLoading = true;
+					this.$http.post("/product/product/onSale?ids="+ids).then(res=>{
+						this.listLoading = false;
+						let {success,message}=res.data;
+						if (success){
+							this.$message({
+								message: message,
+								type: 'success'
+							});
+							this.getProducts();
+						}else {
+							this.$message({
+								message: message,
+								type: 'error'
+							});
+						}
+					})
+
+				}).catch(() => {
+
+				});
+			},
 			//商品下架
-			handleOffSale(){},
+			handleOffSale(){
+				var ids = this.sels.map(item => item.id).toString();
+				this.$confirm('确认上架选中商品吗？', '提示', {
+					type: 'warning'
+				}).then(() => {
+					this.listLoading = true;
+					this.$http.post("/product/product/offSale?ids="+ids).then(res=>{
+						this.listLoading = false;
+						let {success,message}=res.data;
+						if (success){
+							this.$message({
+								message: message,
+								type: 'success'
+							});
+							this.getProducts();
+						}else {
+							this.$message({
+								message: message,
+								type: 'error'
+							});
+						}
+					})
+
+				}).catch(() => {
+
+				});
+			},
 			//上架时间格式
 			formatOnSaleTime(row){
 				return this.formatTime(row.onSaleTime);
@@ -478,6 +544,13 @@
 			},
 			//删除
 			handleDel: function (index, row) {
+				if(row.state == 1){
+					this.$message({
+						message: '该商品上架中，请先下架再删除！！',
+						type: 'warning'
+					});
+					return;
+				}
 				this.$confirm('确认删除该记录吗?', '提示', {
 					type: 'warning'
 				}).then(() => {
@@ -510,6 +583,13 @@
 			},
 			//显示编辑界面
 			handleEdit: function (index, row) {
+				if(row.state == 1){
+					this.$message({
+						message: '该商品上架中，请先下架再修改！！',
+						type: 'warning'
+					});
+					return;
+				}
 				this.handleExt(row.id);
 				this.saveFormVisible = true;
 				console.debug(row);
@@ -525,8 +605,6 @@
 					pic.url=this.fileListPics[f];
 					this.fileList.push(pic);
 				}
-
-				console.debug("====",this.saveForm);
 				this.saveForm.productTypes = a;
 			},
 			//显示新增界面
@@ -586,6 +664,15 @@
 			},
 			//批量删除
 			batchRemove: function () {
+				for(let i=0;i<this.sels.length;i++){
+					if (this.sels[i].state == 1){
+						this.$message({
+							message: '删除商品中存在已上架商品，请先下架！！',
+							type: 'error'
+						});
+						return;
+					}
+				}
 				var ids = this.sels.map(item => item.id).toString();
 				this.$confirm('确认删除选中记录吗？', '提示', {
 					type: 'warning'
