@@ -1204,14 +1204,13 @@
 					<form name="compareForm" action="http://www.itsource.cn/compare.php" method="post" onsubmit="" id="table_list">
 
 						<ul class="list-grid clearfix">
-							<!--todo -->
 							<!-- 如果是4的整数倍，给 li 标签添加class="last"值，即class="item last" -->
 							<li class="item " v-for="product in products">
 								<div class="item-con">
-									<!--售罄-->
+									<!--售罄 todo-->
 									<div class="item-pic" >
-										<a href="http://www.itsource.cn/goods-2393.html" :title="product.name" target="_blank" style="background: url({ imageurl($ lazyload_image)">
-											<img alt="" :src="formatMedias(product.medias)" data-original="http://itsource.img-cn-beijing.aliyuncs.com/图片/taobao-yun-images/537310635822/TB1RwYELXXXXXXHaXXXXXXXXXXX_!!0-item_pic.jpg?x-oss-process=image/resize,m_pad,limit_0,h_320,w_320" style="display: inline;">
+										<a :href="'http://localhost:6002/detail/'+product.id+'.html'" :title="product.name" target="_blank" style="background: url({ imageurl($ lazyload_image)">
+											<img alt="" :src="formatMedias(product.medias)" :data-original="formatMedias(product.medias)" style="display: inline;">
 										</a>
 									</div>
 									<div class="img-scroll scrolled" style=" display: none;">
